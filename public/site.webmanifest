@@ -1,0 +1,13 @@
+{
+  "name": "The Opportunity Link-up",
+  "short_name": "Link-Up",
+  "description": "Scholarships, internships, grants, jobs and giving opportunities worldwide.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B2545",
+  "theme_color": "#0B2545",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/logo.svg", "sizes": "256x256", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

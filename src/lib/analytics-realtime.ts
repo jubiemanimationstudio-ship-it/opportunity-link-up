@@ -1,0 +1,209 @@
+import type { ActivityItem } from "./analytics";
+
+interface AnalyticsState {
+  pageViews: number;
+  uniqueVisitors: number;
+  applyClicks: number;
+  shareClicks: number;
+  saveClicks: number;
+  newsletterSubs: number;
+  contactSubmissions: number;
+  whatsappClicks: number;
+  recent: ActivityItem[];
+  lastEventAt: number;
+  referrers: Map<string, number>;
+  searches: Map<string, { count: number; results: number }>;
+  dailyViews: { date: string; views: number; visitors: number }[];
+  dailyClicks: { date: string; apply: number; share: number; save: number }[];
+  visitors: Set<string>;
+}
+
+const empty: AnalyticsState = {
+  pageViews: 0,
+  uniqueVisitors: 0,
+  applyClicks: 0,
+  shareClicks: 0,
+  saveClicks: 0,
+  newsletterSubs: 0,
+  contactSubmissions: 0,
+  whatsappClicks: 0,
+  recent: [],
+  lastEventAt: 0,
+  referrers: new Map(),
+  searches: new Map(),
+  dailyViews: buildEmptyDaily(),
+  dailyClicks: buildEmptyDailyClicks(),
+  visitors: new Set()
+};
+
+function buildEmptyDaily(): { date: string; views: number; visitors: number }[] {
+  const out: { date: string; views: number; visitors: number }[] = [];
+  const today = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    out.push({ date: d.toISOString().slice(0, 10), views: 0, visitors: 0 });
+  }
+  return out;
+}
+
+function buildEmptyDailyClicks(): { date: string; apply: number; share: number; save: number }[] {
+  const out: { date: string; apply: number; share: number; save: number }[] = [];
+  const today = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    out.push({ date: d.toISOString().slice(0, 10), apply: 0, share: 0, save: 0 });
+  }
+  return out;
+}
+
+const state: AnalyticsState = (globalThis as any).__analyticsRealtime || ((globalThis as any).__analyticsRealtime = empty);
+
+const MAX_RECENT = 50;
+
+export function recordEvent(event: {
+  kind: "view" | "apply" | "share" | "save" | "newsletter" | "contact" | "whatsapp" | "search" | "donate";
+  visitorId?: string;
+  opportunity?: string;
+  country?: string;
+  email?: string;
+  name?: string;
+  reason?: string;
+  channel?: "WhatsApp" | "Twitter" | "Facebook" | "LinkedIn" | "Copy";
+  amount?: number;
+  referrer?: string;
+  query?: string;
+  results?: number;
+}): void {
+  state.lastEventAt = Date.now();
+  const today = new Date().toISOString().slice(0, 10);
+  const dv = state.dailyViews.find((d) => d.date === today);
+  const dc = state.dailyClicks.find((d) => d.date === today);
+
+  switch (event.kind) {
+    case "view":
+      state.pageViews++;
+      if (event.visitorId) {
+        if (!state.visitors.has(event.visitorId)) {
+          state.visitors.add(event.visitorId);
+          state.uniqueVisitors++;
+          if (dv) dv.visitors++;
+        }
+      } else if (dv) {
+        dv.visitors++;
+      }
+      if (dv) dv.views++;
+      if (event.referrer) {
+        state.referrers.set(event.referrer, (state.referrers.get(event.referrer) || 0) + 1);
+      }
+      pushRecent({ kind: "apply", opportunity: event.opportunity || "(unknown)", country: event.country || "Unknown", minutesAgo: 0 });
+      break;
+    case "apply":
+      state.applyClicks++;
+      if (dc) dc.apply++;
+      if (event.opportunity) {
+        pushRecent({ kind: "apply", opportunity: event.opportunity, country: event.country || "Unknown", minutesAgo: 0 });
+      }
+      break;
+    case "share":
+      state.shareClicks++;
+      if (dc) dc.share++;
+      if (event.opportunity) {
+        pushRecent({ kind: "share", opportunity: event.opportunity, channel: event.channel || "Copy", minutesAgo: 0 });
+      }
+      break;
+    case "save":
+      state.saveClicks++;
+      if (dc) dc.save++;
+      if (event.opportunity) {
+        pushRecent({ kind: "save", opportunity: event.opportunity, minutesAgo: 0 });
+      }
+      break;
+    case "newsletter":
+      state.newsletterSubs++;
+      if (event.email) {
+        pushRecent({ kind: "newsletter", email: event.email, country: event.country || "Unknown", minutesAgo: 0 });
+      }
+      break;
+    case "contact":
+      state.contactSubmissions++;
+      if (event.name) {
+        pushRecent({ kind: "contact", name: event.name, reason: event.reason || "General", minutesAgo: 0 });
+      }
+      break;
+    case "whatsapp":
+      state.whatsappClicks++;
+      pushRecent({ kind: "whatsapp", minutesAgo: 0 });
+      break;
+    case "donate":
+      if (event.opportunity) {
+        pushRecent({ kind: "donate", opportunity: event.opportunity, amount: event.amount || 0, minutesAgo: 0 });
+      }
+      break;
+    case "search":
+      if (event.query) {
+        const cur = state.searches.get(event.query) || { count: 0, results: 0 };
+        cur.count++;
+        cur.results = event.results ?? cur.results;
+        state.searches.set(event.query, cur);
+      }
+      break;
+  }
+}
+
+function pushRecent(item: ActivityItem): void {
+  state.recent.unshift(item);
+  if (state.recent.length > MAX_RECENT) state.recent.length = MAX_RECENT;
+  for (const a of state.recent) {
+    if (a.kind === "apply" || a.kind === "save" || a.kind === "whatsapp") {
+      a.minutesAgo = Math.max(0, a.minutesAgo);
+    }
+  }
+}
+
+export function getRealtimeStats() {
+  const topReferrers = Array.from(state.referrers.entries())
+    .map(([source, visits]) => ({ source, visits }))
+    .sort((a, b) => b.visits - a.visits)
+    .slice(0, 6);
+  const topSearches = Array.from(state.searches.entries())
+    .map(([query, v]) => ({ query, count: v.count, results: v.results }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+  return {
+    pageViews: state.pageViews,
+    uniqueVisitors: state.uniqueVisitors,
+    applyClicks: state.applyClicks,
+    shareClicks: state.shareClicks,
+    saveClicks: state.saveClicks,
+    newsletterSubs: state.newsletterSubs,
+    contactSubmissions: state.contactSubmissions,
+    whatsappClicks: state.whatsappClicks,
+    lastEventAt: state.lastEventAt,
+    recent: state.recent.slice(0, 18),
+    topReferrers: topReferrers.length ? topReferrers : [],
+    topSearches: topSearches.length ? topSearches : [],
+    dailyViews: state.dailyViews,
+    dailyClicks: state.dailyClicks,
+    engagementByType: []
+  };
+}
+
+export function resetAnalyticsState(): void {
+  state.pageViews = 0;
+  state.uniqueVisitors = 0;
+  state.applyClicks = 0;
+  state.shareClicks = 0;
+  state.saveClicks = 0;
+  state.newsletterSubs = 0;
+  state.contactSubmissions = 0;
+  state.whatsappClicks = 0;
+  state.recent = [];
+  state.lastEventAt = 0;
+  state.referrers = new Map();
+  state.searches = new Map();
+  state.dailyViews = buildEmptyDaily();
+  state.dailyClicks = buildEmptyDailyClicks();
+  state.visitors = new Set();
+}

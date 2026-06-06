@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B2545"/>
+      <stop offset="100%" stop-color="#091228"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#FFD60A" stroke-opacity="0.08" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <circle cx="200" cy="120" r="220" fill="#FFD60A" fill-opacity="0.06"/>
+  <circle cx="1000" cy="520" r="280" fill="#FFD60A" fill-opacity="0.05"/>
+
+  <g transform="translate(80,90)">
+    <g>
+      <circle cx="36" cy="36" r="34" fill="#FFD60A"/>
+      <path d="M16 36 L26 46 L56 16" stroke="#0B2545" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <text x="100" y="48" font-family="Plus Jakarta Sans, Inter, sans-serif" font-size="32" font-weight="800" fill="#FFD60A">The Opportunity Link-up</text>
+  </g>
+
+  <g transform="translate(80,250)">
+    <text font-family="Plus Jakarta Sans, Inter, sans-serif" font-size="76" font-weight="800" fill="#FFFFFF">
+      <tspan x="0" y="0">Where Opportunity</tspan>
+      <tspan x="0" y="90">Meets Ambition.</tspan>
+    </text>
+    <text x="0" y="200" font-family="Inter, sans-serif" font-size="26" fill="#E2E8F0">
+      <tspan x="0" y="200">Verified scholarships, internships, grants, jobs &amp; causes.</tspan>
+      <tspan x="0" y="240">Updated daily. Always free.</tspan>
+    </text>
+  </g>
+
+  <g transform="translate(80,560)">
+    <rect x="0" y="-30" width="180" height="40" rx="20" fill="#FFD60A"/>
+    <text x="90" y="-4" text-anchor="middle" font-family="Inter, sans-serif" font-size="18" font-weight="700" fill="#0B2545">opportunitylinkup.com</text>
+  </g>
+</svg>
