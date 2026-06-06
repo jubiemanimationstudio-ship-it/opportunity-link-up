@@ -13,6 +13,7 @@ import { AdSlot } from "@/components/ui/AdSlot";
 import { ShareButtons } from "@/components/opportunity/ShareButtons";
 import { OpportunitySidebar } from "@/components/opportunity/OpportunitySidebar";
 import { RelatedOpportunities } from "@/components/opportunity/RelatedOpportunities";
+import { ViewTracker } from "@/components/opportunity/ViewTracker";
 import { formatDate } from "@/lib/utils";
 
 interface PageProps {
@@ -88,6 +89,8 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+
+      <ViewTracker slug={opp.slug} title={opp.title} />
 
       <article className="bg-white dark:bg-[rgb(9_17_33)]">
         <header className="relative isolate overflow-hidden border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">

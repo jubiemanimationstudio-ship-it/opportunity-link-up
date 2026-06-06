@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { track } from "@/lib/track";
 
 type Status = "idle" | "sending" | "success" | "error";
 
@@ -28,6 +29,7 @@ export function ContactForm() {
       if (!res.ok) throw new Error("send failed");
       setStatus("success");
       setForm({ name: "", email: "", type: "general", message: "" });
+      track("contact", { email: form.email, name: form.name, reason: form.type });
     } catch {
       setStatus("error");
     }

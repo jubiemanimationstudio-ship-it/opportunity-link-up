@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { track } from "@/lib/track";
 
 export function SearchBar({
   className,
@@ -23,6 +24,7 @@ export function SearchBar({
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = value.trim();
+    if (q) track("search", { query: q });
     router.push(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   };
 

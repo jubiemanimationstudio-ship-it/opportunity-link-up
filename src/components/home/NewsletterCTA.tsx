@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { track } from "@/lib/track";
 
 export function NewsletterCTA() {
   const [email, setEmail] = useState("");
@@ -26,6 +27,7 @@ export function NewsletterCTA() {
       setStatus("success");
       setMessage("You\u2019re in! Check your inbox to confirm.");
       setEmail("");
+      track("newsletter", { email });
     } catch (err) {
       setStatus("error");
       setMessage("Could not subscribe right now. Please try again later.");

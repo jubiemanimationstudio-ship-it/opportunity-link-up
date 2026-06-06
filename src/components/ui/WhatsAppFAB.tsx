@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { site } from "@/lib/site";
+import { track } from "@/lib/track";
 
 export function WhatsAppFAB() {
   const [visible, setVisible] = useState(false);
@@ -40,6 +41,7 @@ export function WhatsAppFAB() {
           </div>
           <a
             href={site.whatsappInvite}
+            onClick={() => track("whatsapp", { channel: "fab" })}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-transform hover:scale-[1.02]"
