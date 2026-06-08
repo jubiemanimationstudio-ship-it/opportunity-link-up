@@ -18,6 +18,7 @@ function formatDuration(s: number): string {
 
 export function LoginForm() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,7 +51,7 @@ export function LoginForm() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ email, password })
       });
       if (res.status === 429) {
         const j = await res.json().catch(() => ({}));
@@ -99,7 +100,19 @@ export function LoginForm() {
           </div>
         </div>
       )}
-      <label htmlFor="password" className="label">Admin password</label>
+      <label htmlFor="email" className="label">Email</label>
+      <input
+        id="email"
+        type="email"
+        autoComplete="email"
+        required
+        disabled={locked}
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="input disabled:opacity-50"
+        placeholder="admin@example.com"
+      />
+      <label htmlFor="password" className="label mt-4">Password</label>
       <input
         id="password"
         type="password"

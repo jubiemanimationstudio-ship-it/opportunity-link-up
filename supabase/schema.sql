@@ -9,7 +9,7 @@
 create extension if not exists "pgcrypto";
 
 -- ============================================================
--- 1. Admin role enum + helper function
+-- 1. Admin role enum
 -- ============================================================
 do $$ begin
   if not exists (select 1 from pg_type where typname = 'admin_role') then
@@ -17,28 +17,8 @@ do $$ begin
   end if;
 end $$;
 
-create or replace function public.is_admin(min_role public.admin_role default 'editor')
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select coalesce(
-    (select (case min_role
-      when 'viewer'  then role in ('viewer','editor','owner')
-      when 'editor'  then role in ('editor','owner')
-      when 'owner'   then role = 'owner'
-    end)
-    from public.admin_users
-    where user_id = auth.uid()
-    and is_active = true),
-    false
-  );
-$$;
-
 -- ============================================================
--- 2. Admin users table (managed via SQL, not the app)
+-- 2. Admin users table (must exist before is_admin function)
 -- ============================================================
 create table if not exists public.admin_users (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -50,6 +30,21 @@ create table if not exists public.admin_users (
 );
 
 alter table public.admin_users enable row level security;
+
+-- ============================================================
+-- 3. Admin helper function (depends on admin_users table)
+-- ============================================================
+create or replace function public.is_admin(min_role public.admin_role default 'editor')
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as 'select coalesce((select (case min_role when ''viewer'' then role in (''viewer'',''editor'',''owner'') when ''editor'' then role in (''editor'',''owner'') when ''owner'' then role = ''owner'' end) from public.admin_users where user_id = auth.uid() and is_active = true), false)';
+
+-- ============================================================
+-- 4. Admin users RLS policies (now is_admin exists)
+-- ============================================================
 drop policy if exists "admins read self" on public.admin_users;
 create policy "admins read self"
   on public.admin_users for select
@@ -64,7 +59,7 @@ create policy "owners manage admins"
   with check (public.is_admin('owner'));
 
 -- ============================================================
--- 3. Opportunities
+-- 5. Opportunities
 -- ============================================================
 create table if not exists public.opportunities (
   id text primary key default gen_random_uuid()::text,
@@ -146,7 +141,7 @@ create policy "owners delete"
   using (public.is_admin('owner'));
 
 -- ============================================================
--- 4. Contact messages
+-- 6. Contact messages
 -- ============================================================
 create table if not exists public.contact_messages (
   id text primary key default gen_random_uuid()::text,
@@ -198,7 +193,7 @@ create policy "owners delete contact"
   using (public.is_admin('owner'));
 
 -- ============================================================
--- 5. Newsletter subscribers
+-- 7. Newsletter subscribers
 -- ============================================================
 create table if not exists public.newsletter_subscribers (
   id text primary key default gen_random_uuid()::text,
@@ -229,7 +224,7 @@ create policy "admins read newsletter"
   using (public.is_admin('viewer'));
 
 -- ============================================================
--- 6. Analytics events (high-volume, admin only)
+-- 8. Analytics events (high-volume, admin only)
 -- ============================================================
 create table if not exists public.analytics_events (
   id bigserial primary key,
@@ -261,7 +256,7 @@ create policy "admins read analytics"
   using (public.is_admin('viewer'));
 
 -- ============================================================
--- 7. Audit log (admin only, append-only)
+-- 9. Audit log (admin only, append-only)
 -- ============================================================
 create table if not exists public.audit_log (
   id bigserial primary key,
@@ -294,15 +289,14 @@ create policy "admins insert audit"
 -- No update or delete policies on audit_log — append-only.
 
 -- ============================================================
--- 8. Updated-at trigger
+-- 10. Updated-at trigger
 -- ============================================================
 create or replace function public.set_updated_at()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as 'begin new.updated_at = now(); return new; end;';
 
 drop trigger if exists trg_opportunities_updated_at on public.opportunities;
 create trigger trg_opportunities_updated_at
@@ -310,7 +304,7 @@ create trigger trg_opportunities_updated_at
   for each row execute function public.set_updated_at();
 
 -- ============================================================
--- 9. Grant minimal schema access to anon/authenticated
+-- 11. Grant minimal schema access to anon/authenticated
 -- ============================================================
 revoke all on schema public from anon, authenticated;
 grant usage on schema public to anon, authenticated;
@@ -332,7 +326,7 @@ grant insert on public.analytics_events to anon, authenticated;
 -- and gets full CRUD. NEVER expose the service role key to the client.
 
 -- ============================================================
--- 10. Helper: how to create the first admin
+-- 12. Helper: how to create the first admin
 -- ============================================================
 -- 1) Sign up the admin user via Supabase Auth (email + password).
 -- 2) Run this SQL, replacing the UUID and email:
