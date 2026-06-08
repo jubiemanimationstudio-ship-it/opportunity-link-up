@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "./Toast";
 import { adminFetch } from "./csrf";
 import { confirmDialog } from "./ConfirmDialog";
+import { ImageUpload } from "./ImageUpload";
 import type { Opportunity, OpportunityType } from "@/types";
 
 const TYPES: { value: OpportunityType; label: string; color: string }[] = [
@@ -247,9 +248,12 @@ export function OpportunityEditor({ initial }: { initial?: Partial<Opportunity> 
             <input value={f.donateUrl || ""} onChange={(e) => set("donateUrl", e.target.value)} className="input" placeholder="https://\u2026" />
           </div>
           <div className="sm:col-span-2">
-            <label className="label">Cover image URL</label>
-            <input value={f.coverImage || ""} onChange={(e) => set("coverImage", e.target.value)} className="input" placeholder="https://images.unsplash.com/\u2026" />
-            <p className="mt-1 text-[11px] text-ink-mute dark:text-slate-500">Use Unsplash or your Supabase storage URL. Recommended 1200x630.</p>
+            <label className="label">Cover image</label>
+            <ImageUpload
+              value={f.coverImage || ""}
+              onChange={(url) => set("coverImage", url)}
+            />
+            <p className="mt-1 text-[11px] text-ink-mute dark:text-slate-500">Recommended 1200×630. Upload or paste an Unsplash / Supabase URL.</p>
           </div>
         </div>
       </div>

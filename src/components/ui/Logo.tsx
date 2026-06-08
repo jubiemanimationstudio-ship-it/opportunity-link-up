@@ -58,7 +58,7 @@ export function Logo({
 
   if (!asLink) return inner;
   return (
-    <Link href="/" aria-label="The Opportunity Link-up home" className="inline-block">
+    <Link href="/" aria-label="The Opportunity Link-Up" className="inline-block">
       {inner}
     </Link>
   );

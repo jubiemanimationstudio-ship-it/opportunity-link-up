@@ -1,4 +1,5 @@
 import type { Opportunity } from "@/types";
+import { sanitizeContent, sanitizeTextField, sanitizeUrl, sanitizeSlug, sanitizeTag } from "@/lib/sanitize";
 import { scholarshipOpportunities } from "./scholarships";
 import { internshipOpportunities } from "./internships";
 import { jobOpportunities } from "./jobs";
@@ -249,16 +250,16 @@ export async function addToStore(
     `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const newOpp: Opportunity = {
     id,
-    slug: opp.slug || id,
+    slug: sanitizeSlug(opp.slug || id),
     type: opp.type || "Scholarship",
-    title: opp.title || "Untitled",
-    excerpt: opp.excerpt || "",
-    content: opp.content || "",
-    coverImage: opp.coverImage || "",
-    coverImageAlt: opp.coverImageAlt,
-    organization: opp.organization || "",
-    category: opp.category || opp.type?.toLowerCase() || "general",
-    tags: opp.tags || [],
+    title: sanitizeTextField(opp.title || "Untitled", 200),
+    excerpt: sanitizeTextField(opp.excerpt || "", 500),
+    content: sanitizeContent(opp.content || ""),
+    coverImage: sanitizeUrl(opp.coverImage || ""),
+    coverImageAlt: sanitizeTextField(opp.coverImageAlt || opp.title || "", 200),
+    organization: sanitizeTextField(opp.organization || "", 200),
+    category: sanitizeTextField(opp.category || opp.type?.toLowerCase() || "general", 50),
+    tags: (opp.tags || []).map((t) => sanitizeTag(String(t))).filter(Boolean).slice(0, 20),
     level: opp.level,
     funding: opp.funding,
     amount: opp.amount,
@@ -276,8 +277,8 @@ export async function addToStore(
     },
     featured: opp.featured || false,
     views: opp.views || 0,
-    applyUrl: opp.applyUrl,
-    donateUrl: opp.donateUrl,
+    applyUrl: sanitizeUrl(opp.applyUrl || ""),
+    donateUrl: sanitizeUrl(opp.donateUrl || ""),
     raisedAmount: opp.raisedAmount,
     goalAmount: opp.goalAmount,
     status: opp.status || "draft"
@@ -307,9 +308,35 @@ export async function updateInStore(
   const store = getGlobalStore();
   const idx = store.list.findIndex((o) => o.id === id);
   if (idx === -1) return undefined;
+
+  // Sanitize all incoming fields
+  const sanitized: Partial<Opportunity> = {};
+  if (patch.title !== undefined) sanitized.title = sanitizeTextField(patch.title, 200);
+  if (patch.slug !== undefined) sanitized.slug = sanitizeSlug(patch.slug);
+  if (patch.excerpt !== undefined) sanitized.excerpt = sanitizeTextField(patch.excerpt, 500);
+  if (patch.content !== undefined) sanitized.content = sanitizeContent(patch.content);
+  if (patch.coverImage !== undefined) sanitized.coverImage = sanitizeUrl(patch.coverImage);
+  if (patch.coverImageAlt !== undefined) sanitized.coverImageAlt = sanitizeTextField(patch.coverImageAlt, 200);
+  if (patch.organization !== undefined) sanitized.organization = sanitizeTextField(patch.organization, 200);
+  if (patch.category !== undefined) sanitized.category = sanitizeTextField(patch.category, 50);
+  if (patch.tags !== undefined) sanitized.tags = patch.tags.map((t) => sanitizeTag(String(t))).filter(Boolean).slice(0, 20);
+  if (patch.applyUrl !== undefined) sanitized.applyUrl = sanitizeUrl(patch.applyUrl || "");
+  if (patch.donateUrl !== undefined) sanitized.donateUrl = sanitizeUrl(patch.donateUrl || "");
+  if (patch.type !== undefined) sanitized.type = patch.type;
+  if (patch.level !== undefined) sanitized.level = patch.level;
+  if (patch.funding !== undefined) sanitized.funding = patch.funding as any;
+  if (patch.amount !== undefined) sanitized.amount = sanitizeTextField(patch.amount, 100);
+  if (patch.duration !== undefined) sanitized.duration = sanitizeTextField(patch.duration, 100);
+  if (patch.location !== undefined) sanitized.location = sanitizeTextField(patch.location, 200);
+  if (patch.region !== undefined) sanitized.region = patch.region as any;
+  if (patch.remote !== undefined) sanitized.remote = patch.remote;
+  if (patch.deadline !== undefined) sanitized.deadline = patch.deadline;
+  if (patch.featured !== undefined) sanitized.featured = patch.featured;
+  if (patch.status !== undefined) sanitized.status = patch.status;
+
   const updated: Opportunity = {
     ...store.list[idx],
-    ...patch,
+    ...sanitized,
     id: store.list[idx].id,
     updatedAt: new Date().toISOString()
   };

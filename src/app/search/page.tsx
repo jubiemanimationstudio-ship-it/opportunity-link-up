@@ -5,6 +5,7 @@ import { searchOpportunities, type OpportunityFilters } from "@/lib/opportunitie
 import { FiltersBar } from "@/components/opportunity/FiltersBar";
 import { OpportunityList } from "@/components/opportunity/OpportunityList";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { SearchResultsTracker } from "@/components/opportunity/SearchResultsTracker";
 import type { OpportunityType } from "@/types";
 
 export const metadata: Metadata = {
@@ -37,6 +38,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
   return (
     <div className="bg-white dark:bg-[rgb(9_17_33)]">
+      {q ? <SearchResultsTracker query={q} resultsCount={results.length} /> : null}
       <header className="border-b border-slate-200 bg-slate-50 py-12 dark:border-slate-800 dark:bg-slate-900/40">
         <div className="container-page">
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand dark:text-accent">Search</p>

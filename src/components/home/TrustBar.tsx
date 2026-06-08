@@ -47,7 +47,7 @@ export function TrustBar() {
             {[...logos, ...logos].map((logo, i) => (
               <div
                 key={`${logo.name}-${i}`}
-                className="flex items-center gap-2 font-display text-base font-bold uppercase tracking-wider text-ink-mute opacity-70 transition-opacity hover:opacity-100 dark:text-slate-400 sm:text-lg"
+                className="flex items-center gap-2 font-display text-base font-bold uppercase tracking-wider text-ink-mute opacity-70 transition-opacity hover:opacity-100 dark:text-slate-300 sm:text-lg"
               >
                 <svg className="h-5 w-5 text-accent" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M12 .5l3.09 6.26L22 7.77l-5 4.87 1.18 6.88L12 16.27l-6.18 3.25L7 12.64 2 7.77l6.91-1.01z" />

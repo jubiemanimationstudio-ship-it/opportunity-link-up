@@ -23,6 +23,9 @@ export function AdminTopbar() {
           <Link href="/admin/audit" className="hidden rounded-full px-3 py-1.5 font-medium text-ink-mute hover:bg-slate-100 hover:text-ink dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white sm:inline">
             Audit
           </Link>
+          <Link href="/admin/settings" className="hidden rounded-full px-3 py-1.5 font-medium text-ink-mute hover:bg-slate-100 hover:text-ink dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white sm:inline">
+            Settings
+          </Link>
           <Link href="/admin/opportunities/new" className="ml-1 rounded-full bg-brand px-3 py-1.5 font-semibold text-white hover:bg-brand-700">
             + New
           </Link>

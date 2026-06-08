@@ -10,6 +10,7 @@ import {
 import { site } from "@/lib/site";
 import { Badge } from "@/components/ui/Badge";
 import { AdSlot } from "@/components/ui/AdSlot";
+import { BackButton } from "@/components/ui/BackButton";
 import { ShareButtons } from "@/components/opportunity/ShareButtons";
 import { OpportunitySidebar } from "@/components/opportunity/OpportunitySidebar";
 import { RelatedOpportunities } from "@/components/opportunity/RelatedOpportunities";
@@ -95,6 +96,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
       <article className="bg-white dark:bg-[rgb(9_17_33)]">
         <header className="relative isolate overflow-hidden border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
           <div className="container-page pt-10 pb-12 lg:pt-14 lg:pb-16">
+            <BackButton className="mb-4" />
             <nav aria-label="Breadcrumb" className="text-xs text-ink-mute dark:text-slate-400">
               <ol className="flex flex-wrap items-center gap-1.5">
                 <li><Link href="/" className="hover:text-brand dark:hover:text-accent">Home</Link></li>

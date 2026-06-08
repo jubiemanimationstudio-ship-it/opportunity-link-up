@@ -4,6 +4,7 @@ export interface AdminSecretConfig {
   passwordHash: string;
   recoveryPassphraseHash: string;
   passwordHint: string;
+  adminEmail: string;
   passwordSetAt: number;
   lastPasswordChangeAt: number;
   failedRecoveryAttempts: number;
@@ -14,6 +15,7 @@ const DEFAULTS: AdminSecretConfig = {
   passwordHash: "",
   recoveryPassphraseHash: "",
   passwordHint: "",
+  adminEmail: "",
   passwordSetAt: 0,
   lastPasswordChangeAt: 0,
   failedRecoveryAttempts: 0,
@@ -65,7 +67,7 @@ export function isAdminPasswordInitialized(): boolean {
   return !!config.passwordHash && !!config.recoveryPassphraseHash;
 }
 
-export function initializeAdminSecrets(password: string, recoveryPassphrase: string, hint: string): { ok: boolean; error?: string } {
+export function initializeAdminSecrets(password: string, recoveryPassphrase: string, hint: string, adminEmail?: string): { ok: boolean; error?: string } {
   const pwErr = validatePasswordStrength(password);
   if (pwErr) return { ok: false, error: pwErr };
   if (recoveryPassphrase.length < 12) {
@@ -79,6 +81,7 @@ export function initializeAdminSecrets(password: string, recoveryPassphrase: str
     passwordHash: hashSecret(password),
     recoveryPassphraseHash: hashSecret(recoveryPassphrase),
     passwordHint: hint.slice(0, 120),
+    adminEmail: (adminEmail || "").trim().toLowerCase(),
     passwordSetAt: now,
     lastPasswordChangeAt: now,
     failedRecoveryAttempts: 0,
@@ -109,6 +112,16 @@ export function rotateRecoveryPassphrase(newPassphrase: string): { ok: boolean; 
     recoveryPassphraseHash: hashSecret(newPassphrase)
   });
   return { ok: true };
+}
+
+export function getAdminEmail(): string {
+  const config = getConfig();
+  return config.adminEmail || process.env.ADMIN_EMAIL || "";
+}
+
+export function setAdminEmail(email: string): void {
+  const config = getConfig();
+  setConfig({ ...config, adminEmail: email.trim().toLowerCase() });
 }
 
 export function checkPassword(input: string): boolean {

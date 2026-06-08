@@ -1,5 +1,15 @@
 import { NextResponse } from "next/server";
 import { addContactMessage } from "@/lib/data/contact-store";
+import { sanitizeTextField } from "@/lib/sanitize";
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +21,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     }
 
-    const entry = addContactMessage({ name, email, type, message });
+    const safeName = sanitizeTextField(name, 200);
+    const safeEmail = sanitizeTextField(email, 254);
+    const safeType = sanitizeTextField(type || "general", 100);
+    const safeMessage = sanitizeTextField(message, 5000);
+
+    const entry = addContactMessage({ name: safeName, email: safeEmail, type: safeType, message: safeMessage });
 
     if (process.env.RESEND_API_KEY && process.env.CONTACT_TO_EMAIL) {
       try {
@@ -23,8 +38,8 @@ export async function POST(req: Request) {
           from: process.env.CONTACT_FROM_EMAIL || "Link-Up <hello@opportunitylinkup.com>",
           to: process.env.CONTACT_TO_EMAIL,
           replyTo: email,
-          subject: `[${type}] ${name} \u2014 Link-Up message`,
-          html: `<p><strong>From:</strong> ${name} (${email})</p><p><strong>Reason:</strong> ${type}</p><hr/><p>${message.replace(/\n/g, "<br/>")}</p>`
+          subject: `[${safeType}] ${safeName} \u2014 Link-Up message`,
+          html: `<p><strong>From:</strong> ${escapeHtml(safeName)} (${escapeHtml(safeEmail)})</p><p><strong>Reason:</strong> ${escapeHtml(safeType)}</p><hr/><p>${escapeHtml(safeMessage).replace(/\n/g, "<br/>")}</p>`
         });
       } catch (e: any) {
         console.log("[ContactForm] Resend unavailable, message saved to store only:", e?.message ?? String(e));
