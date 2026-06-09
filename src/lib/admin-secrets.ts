@@ -244,7 +244,8 @@ export function touchSession(id: string): void {
 
 export function isSessionActive(id: string): boolean {
   const s = sessions.get(id);
-  return !!s && !s.revoked;
+  if (!s) return true;
+  return !s.revoked;
 }
 
 export function revokeSession(id: string): boolean {
