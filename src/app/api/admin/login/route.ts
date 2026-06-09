@@ -20,16 +20,11 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const password = String(body?.password || "");
 
-  console.log("[login] Attempt:", { passwordLength: password.length, hasPassword: !!password });
-
   if (!password) {
     return NextResponse.json({ error: "Password is required." }, { status: 400 });
   }
 
-  const checkResult = checkPassword(password);
-  console.log("[login] Password check:", { result: checkResult, envPassword: process.env.ADMIN_PASSWORD ? "set" : "not set" });
-
-  if (!checkResult) {
+  if (!checkPassword(password)) {
     const next = recordFailedAttempt(ip);
     const left = remainingAttempts(ip);
     audit({ ip, action: "login.failed", meta: { remainingAttempts: left } });
