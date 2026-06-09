@@ -8,6 +8,7 @@ import { site } from "@/lib/site";
 import { Sparkline, LineChart, DonutChart, BarChart } from "@/components/admin/Charts";
 import { RefreshButton } from "@/components/admin/RefreshButton";
 import { SessionsPanel } from "@/components/admin/SessionsPanel";
+import { AutoRefresh } from "@/components/admin/AutoRefresh";
 
 export const metadata = { title: "Admin · Engagement Dashboard" };
 export const dynamic = "force-dynamic";
@@ -44,12 +45,45 @@ export default async function AdminDashboardPage() {
   const recoveryStatus = getRecoveryStatus();
   const currentSessionId = cookies().get("ha_session")?.value;
 
-  const engagementByType = opps.map((o) => ({ type: o.type, views: 0, applies: 0 }));
+  const oppStats = supabaseStats?.oppStats || [];
+
+  const typeAgg = new Map<string, { views: number; applies: number }>();
+  for (const o of oppStats) {
+    const key = o.type;
+    const cur = typeAgg.get(key) || { views: 0, applies: 0 };
+    cur.views += o.views;
+    cur.applies += o.applies;
+    typeAgg.set(key, cur);
+  }
+  const engagementByType = opps.map((o) => {
+    const agg = typeAgg.get(o.type) || { views: 0, applies: 0 };
+    return { type: o.type, views: agg.views, applies: agg.applies };
+  });
+
+  const oppBySlug = new Map(oppStats.map(o => [o.slug, o]));
+  const oppsWithData = opps.map(o => ({
+    ...o,
+    views: oppBySlug.get(o.slug)?.views || 0,
+    applies: oppBySlug.get(o.slug)?.applies || 0,
+    shares: oppBySlug.get(o.slug)?.shares || 0,
+    saves: oppBySlug.get(o.slug)?.saves || 0,
+  }));
+  const topOpps = [...oppsWithData].sort((a, b) => b.views - a.views);
+  const underperformers = [...oppsWithData]
+    .filter(o => o.views > 0)
+    .sort((a, b) => a.views - b.views)
+    .slice(0, 4);
+  if (underperformers.length < 4) {
+    const zeroOpps = oppsWithData.filter(o => o.views === 0);
+    underperformers.push(...zeroOpps.slice(0, 4 - underperformers.length));
+  }
+
   const featuredViewShare = 0;
   const totalEngagement = stats.applyClicks + stats.shareClicks + stats.saveClicks;
 
   return (
     <div>
+      <AutoRefresh intervalMs={30000} />
       <main className="container-page py-8 lg:py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -115,24 +149,27 @@ export default async function AdminDashboardPage() {
             <div className="mt-3 grid grid-cols-2 items-center gap-3">
               <div className="h-44">
                 <DonutChart
-                  data={engagementByType.length ? engagementByType.map((e) => ({
+                  data={engagementByType.some(e => e.views > 0) ? engagementByType.filter(e => e.views > 0).map((e) => ({
                     label: TYPE_LABEL[e.type] || e.type,
-                    value: Math.max(1, e.views),
+                    value: e.views,
                     color: TYPE_COLOR[e.type] || "#94A3B8"
                   })) : [{ label: "No data yet", value: 1, color: "#cbd5e1" }]}
                   size={180}
                 />
               </div>
               <ul className="space-y-1.5 text-xs">
-                {opps.slice(0, 6).map((o) => (
-                  <li key={o.id} className="flex items-center justify-between gap-2">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: TYPE_COLOR[o.type] || "#94A3B8" }} />
-                      <span className="truncate text-ink-mute dark:text-slate-400">{TYPE_LABEL[o.type] || o.type}</span>
-                    </span>
-                    <span className="font-mono text-ink-mute dark:text-slate-500">0</span>
-                  </li>
-                ))}
+                {opps.slice(0, 6).map((o) => {
+                  const agg = typeAgg.get(o.type) || { views: 0, applies: 0 };
+                  return (
+                    <li key={o.id} className="flex items-center justify-between gap-2">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: TYPE_COLOR[o.type] || "#94A3B8" }} />
+                        <span className="truncate text-ink-mute dark:text-slate-400">{TYPE_LABEL[o.type] || o.type}</span>
+                      </span>
+                      <span className="font-mono text-ink-mute dark:text-slate-500">{agg.views}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>
@@ -161,30 +198,33 @@ export default async function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {opps.slice(0, 8).map((o) => (
-                    <tr key={o.id} className="group">
-                      <td className="py-3 pr-2">
-                        <Link href={`/opportunities/${o.slug}`} target="_blank" className="block max-w-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: TYPE_COLOR[o.type] || "#94A3B8" }} />
-                            <span className="truncate font-semibold text-ink group-hover:text-brand dark:text-white dark:group-hover:text-accent">
-                              {o.title}
+                  {topOpps.slice(0, 8).map((o) => {
+                    const conv = o.views > 0 ? Math.round((o.applies / o.views) * 100) : 0;
+                    return (
+                      <tr key={o.id} className="group">
+                        <td className="py-3 pr-2">
+                          <Link href={`/opportunities/${o.slug}`} target="_blank" className="block max-w-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: TYPE_COLOR[o.type] || "#94A3B8" }} />
+                              <span className="truncate font-semibold text-ink group-hover:text-brand dark:text-white dark:group-hover:text-accent">
+                                {o.title}
+                              </span>
+                            </div>
+                            <span className="ml-4 text-[11px] text-ink-mute dark:text-slate-500">
+                              {TYPE_LABEL[o.type] || o.type}
+                              {o.featured ? " · Featured" : ""}
                             </span>
-                          </div>
-                          <span className="ml-4 text-[11px] text-ink-mute dark:text-slate-500">
-                            {TYPE_LABEL[o.type] || o.type}
-                            {o.featured ? " · Featured" : ""}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="py-3 pr-2 text-right font-mono text-ink-mute dark:text-slate-500">0</td>
-                      <td className="py-3 pr-2 text-right font-mono text-ink-mute dark:text-slate-500">0</td>
-                      <td className="py-3 pr-2 text-right font-mono text-ink-mute dark:text-slate-500">0%</td>
-                      <td className="py-3 pr-2 w-32">
-                        <Sparkline data={Array(30).fill(0)} color={TYPE_COLOR[o.type] || "#0B2545"} />
-                      </td>
-                    </tr>
-                  ))}
+                          </Link>
+                        </td>
+                        <td className="py-3 pr-2 text-right font-mono text-ink-mute dark:text-slate-500">{o.views}</td>
+                        <td className="py-3 pr-2 text-right font-mono text-ink-mute dark:text-slate-500">{o.applies}</td>
+                        <td className="py-3 pr-2 text-right font-mono text-ink-mute dark:text-slate-500">{conv}%</td>
+                        <td className="py-3 pr-2 w-32">
+                          <Sparkline data={Array(30).fill(o.views > 0 ? Math.max(1, Math.round(o.views / 30)) : 0)} color={TYPE_COLOR[o.type] || "#0B2545"} />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -273,21 +313,24 @@ export default async function AdminDashboardPage() {
             <h2 className="font-display text-base font-bold text-ink dark:text-white">Underperformers</h2>
             <p className="text-xs text-ink-mute dark:text-slate-400">Posts that need attention · all start at 0</p>
             <div className="mt-4 space-y-3">
-              {opps.slice(-4).map((o) => (
-                <div key={o.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 p-3 dark:border-slate-800">
-                  <div className="min-w-0">
-                    <Link href={`/opportunities/${o.slug}`} target="_blank" className="block truncate text-sm font-semibold text-ink hover:text-brand dark:text-white dark:hover:text-accent">
-                      {o.title}
+              {underperformers.map((o) => {
+                const conv = o.views > 0 ? Math.round((o.applies / o.views) * 100) : 0;
+                return (
+                  <div key={o.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 p-3 dark:border-slate-800">
+                    <div className="min-w-0">
+                      <Link href={`/opportunities/${o.slug}`} target="_blank" className="block truncate text-sm font-semibold text-ink hover:text-brand dark:text-white dark:hover:text-accent">
+                        {o.title}
+                      </Link>
+                      <span className="text-[11px] text-ink-mute dark:text-slate-500">
+                        {TYPE_LABEL[o.type] || o.type} · {o.views} views · {conv}% conv.
+                      </span>
+                    </div>
+                    <Link href={`/admin/opportunities/${o.id}/edit`} className="shrink-0 text-xs font-semibold text-brand link-underline dark:text-accent">
+                      Edit →
                     </Link>
-                    <span className="text-[11px] text-ink-mute dark:text-slate-500">
-                      {TYPE_LABEL[o.type] || o.type} · 0 views · 0% conv.
-                    </span>
                   </div>
-                  <Link href={`/admin/opportunities/${o.id}/edit`} className="shrink-0 text-xs font-semibold text-brand link-underline dark:text-accent">
-                    Edit →
-                  </Link>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

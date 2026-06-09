@@ -8,6 +8,8 @@ create table if not exists public.analytics_events (
   country text,
   referrer text,
   opportunity text,
+  slug text,
+  opp_type text,
   email text,
   name text,
   reason text,
@@ -29,3 +31,4 @@ create policy "Service role only" on public.analytics_events
 -- Index for dashboard queries
 create index if not exists idx_analytics_events_created_at on public.analytics_events (created_at desc);
 create index if not exists idx_analytics_events_kind on public.analytics_events (kind);
+create index if not exists idx_analytics_events_slug on public.analytics_events (slug);

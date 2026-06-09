@@ -93,10 +93,63 @@ export function audit(event: Omit<AuditEvent, "id" | "ts">): void {
   auditLog.unshift(entry);
   if (auditLog.length > MAX_AUDIT_ENTRIES) auditLog.length = MAX_AUDIT_ENTRIES;
   console.log(`[AUDIT] ${entry.action} ip=${entry.ip} target=${entry.target || "-"}`);
+  persistAuditToSupabase(entry).catch(() => {});
 }
 
-export function getAuditLog(limit = 100): AuditEvent[] {
-  return auditLog.slice(0, limit);
+async function persistAuditToSupabase(entry: AuditEvent): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return;
+  try {
+    await fetch(`${url}/rest/v1/audit_log`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": key,
+        "Authorization": `Bearer ${key}`,
+        "Prefer": "resolution=merge-duplicates"
+      },
+      body: JSON.stringify({
+        id: entry.id,
+        action: entry.action,
+        ip: entry.ip || null,
+        target: entry.target || null,
+        meta: entry.meta ? JSON.stringify(entry.meta) : null,
+        created_at: new Date(entry.ts).toISOString()
+      })
+    });
+  } catch {
+    // silent
+  }
+}
+
+export async function getAuditLog(limit = 100): Promise<AuditEvent[]> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return auditLog.slice(0, limit);
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/audit_log?order=created_at.desc&limit=${limit}`,
+      {
+        headers: {
+          "apikey": key,
+          "Authorization": `Bearer ${key}`
+        }
+      }
+    );
+    if (!res.ok) return auditLog.slice(0, limit);
+    const rows = await res.json() as any[];
+    return rows.map((r) => ({
+      id: r.id,
+      ts: new Date(r.created_at).getTime(),
+      ip: r.ip || "unknown",
+      action: r.action,
+      target: r.target || undefined,
+      meta: r.meta ? (typeof r.meta === "string" ? JSON.parse(r.meta) : r.meta) : undefined
+    }));
+  } catch {
+    return auditLog.slice(0, limit);
+  }
 }
 
 export function getClientIp(req: Request): string {

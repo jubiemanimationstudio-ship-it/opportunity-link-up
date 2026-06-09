@@ -21,8 +21,10 @@ const ACTION_LABEL: Record<string, { label: string; tone: "brand" | "emerald" | 
   "csrf.rejected": { label: "CSRF rejected", tone: "rose" }
 };
 
-export default function AdminAuditPage() {
-  const events = getAuditLog(200);
+export const dynamic = "force-dynamic";
+
+export default async function AdminAuditPage() {
+  const events = await getAuditLog(200);
   return (
     <div>
       <main className="container-page py-8 lg:py-10">

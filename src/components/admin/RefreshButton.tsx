@@ -1,24 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "./Toast";
 
 export function RefreshButton() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-
-  useEffect(() => {
-    setLastRefresh(new Date());
-  }, []);
 
   const onClick = () => {
     setLoading(true);
-    toast("Refreshing analytics\u2026", "info");
+    toast("Refreshing analytics…", "info");
+    router.refresh();
     setTimeout(() => {
-      setLastRefresh(new Date());
       setLoading(false);
       toast("Dashboard updated.", "good");
-    }, 900);
+    }, 800);
   };
 
   return (
@@ -31,7 +28,7 @@ export function RefreshButton() {
         <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
         <path d="M21 3v5h-5" />
       </svg>
-      {loading ? "Refreshing\u2026" : "Refresh"}
+      {loading ? "Refreshing…" : "Refresh"}
     </button>
   );
 }

@@ -9,6 +9,8 @@ async function persistToSupabase(event: {
   country?: string;
   referrer?: string;
   opportunity?: string;
+  slug?: string;
+  oppType?: string;
   email?: string;
   name?: string;
   reason?: string;
@@ -39,6 +41,8 @@ async function persistToSupabase(event: {
         country: event.country || null,
         referrer: event.referrer || null,
         opportunity: event.opportunity || null,
+        slug: event.slug || null,
+        opp_type: event.oppType || null,
         email: event.email || null,
         name: event.name || null,
         reason: event.reason || null,
@@ -76,6 +80,8 @@ export async function POST(req: Request) {
       country,
       referrer,
       opportunity: body.opportunity,
+      slug: body.slug,
+      oppType: body.oppType,
       email: body.email,
       name: body.name,
       reason: body.reason,
