@@ -6,7 +6,8 @@ import { track } from "@/lib/track";
 
 export function ShareButtons({ title, slug }: { title: string; slug: string }) {
   const [copied, setCopied] = useState(false);
-  const url = `${site.url}/opportunities/${slug}`;
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : site.url;
+  const url = `${baseUrl}/opportunities/${slug}`;
   const encodedUrl = encodeURIComponent(url);
   const encodedTitle = encodeURIComponent(title);
   const text = encodeURIComponent(`${title} \u2014 via ${site.shortName}`);

@@ -19,10 +19,13 @@ async function persistToSupabase(event: {
 }) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return;
+  if (!url || !key) {
+    console.log("[Track] Supabase not configured, skipping persist");
+    return;
+  }
 
   try {
-    await fetch(`${url}/rest/v1/analytics_events`, {
+    const res = await fetch(`${url}/rest/v1/analytics_events`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -46,8 +49,12 @@ async function persistToSupabase(event: {
         created_at: new Date().toISOString()
       })
     });
-  } catch {
-    // persist failure should never break the user experience
+    if (!res.ok) {
+      const err = await res.text();
+      console.log("[Track] Supabase persist failed:", res.status, err);
+    }
+  } catch (e: any) {
+    console.log("[Track] Supabase persist error:", e?.message);
   }
 }
 
