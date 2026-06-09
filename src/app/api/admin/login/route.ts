@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         headers: {
           "Content-Type": "application/json",
           "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-          "Authorization": `Bearer ${supabaseServiceKey}`
+          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""}`
         },
         body: JSON.stringify({ email, password })
       });
