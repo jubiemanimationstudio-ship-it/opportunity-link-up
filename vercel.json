@@ -4,7 +4,6 @@
   "devCommand": "next dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["fra1", "lhr1", "iad1"],
   "headers": [
     {
       "source": "/(.*)",
@@ -27,7 +26,6 @@
   "redirects": [
     { "source": "/home", "destination": "/", "permanent": true }
   ],
-  "crons": [],
   "github": {
     "silent": true,
     "autoAlias": true
