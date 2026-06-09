@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminSession } from "@/lib/auth";
-import { getAdminEmail, setAdminEmail, checkRecoveryPassphrase, rotateRecoveryPassphrase, getAdminSecretStatus } from "@/lib/admin-secrets";
+import { getAdminEmail, setAdminEmail, checkRecoveryPassphrase, rotateRecoveryPassphrase, getAdminSecretStatus, ensureConfigLoaded } from "@/lib/admin-secrets";
 import { audit, getClientIp } from "@/lib/security";
 import { middlewareForAdminApi } from "@/lib/admin-middleware";
 
@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   if (!isAdminSession()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  await ensureConfigLoaded();
   const email = getAdminEmail();
   const status = getAdminSecretStatus();
   return NextResponse.json({ email, initialized: status.initialized, hint: status.hint });
@@ -17,6 +18,7 @@ export async function PATCH(req: Request) {
   const blocked = middlewareForAdminApi(req);
   if (blocked) return blocked;
   if (!isAdminSession()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  await ensureConfigLoaded();
 
   const body = await req.json().catch(() => ({}));
   const ip = getClientIp(req);

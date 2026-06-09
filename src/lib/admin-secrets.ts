@@ -22,7 +22,7 @@ const DEFAULTS: AdminSecretConfig = {
   lockedUntil: 0
 };
 
-const store: { config: AdminSecretConfig } = (globalThis as any).__adminSecretConfig || ((globalThis as any).__adminSecretConfig = { config: { ...DEFAULTS } });
+const store: { config: AdminSecretConfig; loaded: boolean } = (globalThis as any).__adminSecretConfig || ((globalThis as any).__adminSecretConfig = { config: { ...DEFAULTS }, loaded: false });
 
 function getConfig(): AdminSecretConfig {
   if (!store.config) store.config = { ...DEFAULTS };
@@ -31,6 +31,71 @@ function getConfig(): AdminSecretConfig {
 
 function setConfig(next: AdminSecretConfig): void {
   store.config = next;
+  saveConfigToSupabase(next).catch(() => {});
+}
+
+async function loadConfigFromSupabase(): Promise<AdminSecretConfig> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return { ...DEFAULTS };
+  try {
+    const res = await fetch(`${url}/rest/v1/admin_config?id=eq.main&select=*`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` }
+    });
+    if (!res.ok) return { ...DEFAULTS };
+    const rows = await res.json() as any[];
+    if (!rows.length) return { ...DEFAULTS };
+    const r = rows[0];
+    return {
+      passwordHash: r.password_hash || "",
+      recoveryPassphraseHash: r.recovery_passphrase_hash || "",
+      passwordHint: r.password_hint || "",
+      adminEmail: r.admin_email || "",
+      passwordSetAt: r.password_set_at || 0,
+      lastPasswordChangeAt: r.last_password_change_at || 0,
+      failedRecoveryAttempts: r.failed_recovery_attempts || 0,
+      lockedUntil: r.locked_until || 0
+    };
+  } catch {
+    return { ...DEFAULTS };
+  }
+}
+
+async function saveConfigToSupabase(config: AdminSecretConfig): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return;
+  try {
+    await fetch(`${url}/rest/v1/admin_config`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        Prefer: "resolution=merge-duplicates"
+      },
+      body: JSON.stringify({
+        id: "main",
+        password_hash: config.passwordHash,
+        recovery_passphrase_hash: config.recoveryPassphraseHash,
+        password_hint: config.passwordHint,
+        admin_email: config.adminEmail,
+        password_set_at: config.passwordSetAt,
+        last_password_change_at: config.lastPasswordChangeAt,
+        failed_recovery_attempts: config.failedRecoveryAttempts,
+        locked_until: config.lockedUntil
+      })
+    });
+  } catch {}
+}
+
+export async function ensureConfigLoaded(): Promise<void> {
+  if (store.loaded) return;
+  const config = await loadConfigFromSupabase();
+  if (config.passwordHash) {
+    store.config = config;
+  }
+  store.loaded = true;
 }
 
 export function hashSecret(secret: string): string {

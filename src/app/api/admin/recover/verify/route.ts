@@ -5,7 +5,8 @@ import {
   rotatePassword,
   validatePasswordStrength,
   isAdminPasswordInitialized,
-  getAdminEmail
+  getAdminEmail,
+  ensureConfigLoaded
 } from "@/lib/admin-secrets";
 import { setAdminSession } from "@/lib/auth";
 import { audit, getClientIp, getLockoutState, recordFailedAttempt, resetAttempts } from "@/lib/security";
@@ -13,6 +14,7 @@ import { audit, getClientIp, getLockoutState, recordFailedAttempt, resetAttempts
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  await ensureConfigLoaded();
   const ip = getClientIp(req);
   const lock = getLockoutState(ip);
   if (lock.locked) {

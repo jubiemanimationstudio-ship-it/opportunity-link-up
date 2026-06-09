@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { setAdminSession } from "@/lib/auth";
-import { checkPassword, registerSession } from "@/lib/admin-secrets";
+import { checkPassword, registerSession, ensureConfigLoaded } from "@/lib/admin-secrets";
 import { audit, getClientIp, getLockoutState, recordFailedAttempt, resetAttempts, remainingAttempts } from "@/lib/security";
 
 const GENERIC_ERROR = "Invalid password.";
 
 export async function POST(req: Request) {
+  await ensureConfigLoaded();
   const ip = getClientIp(req);
 
   const lockout = getLockoutState(ip);
