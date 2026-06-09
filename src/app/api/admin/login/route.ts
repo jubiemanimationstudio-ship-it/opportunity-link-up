@@ -48,6 +48,8 @@ export async function POST(req: Request) {
 
       const authData = await authRes.json();
 
+      console.log("[login] Supabase auth response:", { ok: authRes.ok, status: authRes.status, hasUser: !!authData?.user, errorMsg: authData?.error_description || authData?.msg });
+
       if (!authRes.ok || !authData?.user) {
         const next = recordFailedAttempt(ip);
         const left = remainingAttempts(ip);
@@ -77,6 +79,7 @@ export async function POST(req: Request) {
         }
       );
       const adminData = await adminCheck.json();
+      console.log("[login] Admin check:", { status: adminCheck.status, data: adminData });
 
       if (!adminData || adminData.length === 0) {
         audit({ ip, action: "login.failed", meta: { reason: "not_admin" } });
@@ -84,6 +87,7 @@ export async function POST(req: Request) {
       }
 
       // Success
+      console.log("[login] Success for:", email, "role:", adminData[0]?.role);
       resetAttempts(ip);
       setAdminSession();
       const userAgent = req.headers.get("user-agent") || "Unknown";
