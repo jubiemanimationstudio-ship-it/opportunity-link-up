@@ -7,7 +7,7 @@ export const site = {
     "The Opportunity Link-up (TOL) is your daily hub for verified scholarships, internships, grants, jobs, fellowships and charitable causes. We surface life-changing opportunities and link you straight to the apply button.",
   url:
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-    "https://opportunitylinkup.com",
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://opportunitylinkup.com"),
   ogImage: "/og-default.svg",
   logo: {
     image: "/logo.svg",

@@ -207,3 +207,126 @@ export function resetAnalyticsState(): void {
   state.dailyClicks = buildEmptyDailyClicks();
   state.visitors = new Set();
 }
+
+export async function getSupabaseStats(): Promise<{
+  pageViews: number;
+  uniqueVisitors: number;
+  applyClicks: number;
+  shareClicks: number;
+  saveClicks: number;
+  newsletterSubs: number;
+  contactSubmissions: number;
+  whatsappClicks: number;
+  lastEventAt: number;
+  recent: ActivityItem[];
+  topReferrers: { source: string; visits: number }[];
+  topSearches: { query: string; count: number; results: number }[];
+  dailyViews: { date: string; views: number; visitors: number }[];
+  dailyClicks: { date: string; apply: number; share: number; save: number }[];
+} | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const since = thirtyDaysAgo.toISOString();
+
+    const res = await fetch(
+      `${url}/rest/v1/analytics_events?created_at=gte.${since}&order=created_at.desc&limit=500`,
+      {
+        headers: {
+          "apikey": key,
+          "Authorization": `Bearer ${key}`
+        }
+      }
+    );
+    if (!res.ok) return null;
+    const rows = await res.json() as any[];
+
+    let pageViews = 0;
+    let uniqueVisitors = 0;
+    let applyClicks = 0;
+    let shareClicks = 0;
+    let saveClicks = 0;
+    let newsletterSubs = 0;
+    let contactSubmissions = 0;
+    let whatsappClicks = 0;
+    let lastEventAt = 0;
+    const visitors = new Set<string>();
+    const dailyViews = buildEmptyDaily();
+    const dailyClicks = buildEmptyDailyClicks();
+    const recent: ActivityItem[] = [];
+
+    for (const row of rows) {
+      const ts = new Date(row.created_at).getTime();
+      if (ts > lastEventAt) lastEventAt = ts;
+      const day = row.created_at.slice(0, 10);
+
+      switch (row.kind) {
+        case "view":
+          pageViews++;
+          if (row.visitor_id && !visitors.has(row.visitor_id)) {
+            visitors.add(row.visitor_id);
+            uniqueVisitors++;
+            const dv = dailyViews.find(d => d.date === day);
+            if (dv) dv.visitors++;
+          }
+          const dvAll = dailyViews.find(d => d.date === day);
+          if (dvAll) dvAll.views++;
+          recent.push({ kind: "apply", opportunity: row.opportunity || "(unknown)", country: row.country || "Unknown", minutesAgo: Math.max(0, Math.floor((Date.now() - ts) / 60000)) });
+          break;
+        case "apply":
+          applyClicks++;
+          const dcA = dailyClicks.find(d => d.date === day);
+          if (dcA) dcA.apply++;
+          if (row.opportunity) recent.push({ kind: "apply", opportunity: row.opportunity, country: row.country || "Unknown", minutesAgo: Math.max(0, Math.floor((Date.now() - ts) / 60000)) });
+          break;
+        case "share":
+          shareClicks++;
+          const dcS = dailyClicks.find(d => d.date === day);
+          if (dcS) dcS.share++;
+          if (row.opportunity) recent.push({ kind: "share", opportunity: row.opportunity, channel: row.channel || "Copy", minutesAgo: Math.max(0, Math.floor((Date.now() - ts) / 60000)) });
+          break;
+        case "save":
+          saveClicks++;
+          const dcSV = dailyClicks.find(d => d.date === day);
+          if (dcSV) dcSV.save++;
+          if (row.opportunity) recent.push({ kind: "save", opportunity: row.opportunity, minutesAgo: Math.max(0, Math.floor((Date.now() - ts) / 60000)) });
+          break;
+        case "newsletter":
+          newsletterSubs++;
+          if (row.email) recent.push({ kind: "newsletter", email: row.email, country: row.country || "Unknown", minutesAgo: Math.max(0, Math.floor((Date.now() - ts) / 60000)) });
+          break;
+        case "contact":
+          contactSubmissions++;
+          if (row.name) recent.push({ kind: "contact", name: row.name, reason: row.reason || "General", minutesAgo: Math.max(0, Math.floor((Date.now() - ts) / 60000)) });
+          break;
+        case "whatsapp":
+          whatsappClicks++;
+          recent.push({ kind: "whatsapp", minutesAgo: Math.max(0, Math.floor((Date.now() - ts) / 60000)) });
+          break;
+      }
+    }
+
+    return {
+      pageViews,
+      uniqueVisitors: visitors.size || uniqueVisitors,
+      applyClicks,
+      shareClicks,
+      saveClicks,
+      newsletterSubs,
+      contactSubmissions,
+      whatsappClicks,
+      lastEventAt,
+      recent: recent.slice(0, 18),
+      topReferrers: [],
+      topSearches: [],
+      dailyViews,
+      dailyClicks
+    };
+  } catch {
+    return null;
+  }
+}

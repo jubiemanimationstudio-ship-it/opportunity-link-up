@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getAllOpportunities } from "@/lib/opportunities";
-import { getRealtimeStats } from "@/lib/analytics-realtime";
+import { getRealtimeStats, getSupabaseStats } from "@/lib/analytics-realtime";
 import { formatNumber, timeAgo, type ActivityItem } from "@/lib/analytics";
 import { listActiveSessions, getAdminSecretStatus, getRecoveryStatus } from "@/lib/admin-secrets";
 import { cookies } from "next/headers";
@@ -36,7 +36,9 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default async function AdminDashboardPage() {
   const opps = await getAllOpportunities();
-  const stats = getRealtimeStats();
+  const supabaseStats = await getSupabaseStats();
+  const memoryStats = getRealtimeStats();
+  const stats = supabaseStats || memoryStats;
   const sessions = listActiveSessions();
   const secretStatus = getAdminSecretStatus();
   const recoveryStatus = getRecoveryStatus();
